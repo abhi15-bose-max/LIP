@@ -3,18 +3,6 @@
 // ============================================================================
 // Local Interaction Processor (LIP)
 // Min/Max Engine
-//
-// Computes MIN and MAX over enabled neighbours only.
-//
-// SE mask layout:
-//
-// 8 7 6
-// 5 4 3
-// 2 1 0
-//
-// NW N NE
-// W  C E
-// SW S SE
 // ============================================================================
 
 module minmax_engine(
@@ -39,67 +27,139 @@ module minmax_engine(
 
 );
 
-// ============================================================
-// Internal storage
-// ============================================================
-
-reg [15:0] values [0:8];
-
-integer i;
-
-// ============================================================
-// Min / Max computation
-// ============================================================
-
 always @(*)
 
 begin
 
-    // --------------------------------------------------------
-    // Neighbour ordering
-    // --------------------------------------------------------
-
-    values[0] = nw;
-    values[1] = n;
-    values[2] = ne;
-
-    values[3] = w;
-    values[4] = self;
-    values[5] = e;
-
-    values[6] = sw;
-    values[7] = s;
-    values[8] = se;
-
-    // --------------------------------------------------------
-    // Initialize
-    // --------------------------------------------------------
+    // initialize
 
     min_val = 16'hFFFF;
 
     max_val = 16'h0000;
 
-    // --------------------------------------------------------
-    // Compute only enabled neighbours
-    // --------------------------------------------------------
+    // NW
 
-    for(i=0;i<9;i=i+1)
+    if(se_mask[8])
 
     begin
 
-        if(se_mask[8-i])
+        if(nw < min_val)
+            min_val = nw;
 
-        begin
+        if(nw > max_val)
+            max_val = nw;
 
-            if(values[i] < min_val)
+    end
 
-                min_val = values[i];
+    // N
 
-            if(values[i] > max_val)
+    if(se_mask[7])
 
-                max_val = values[i];
+    begin
 
-        end
+        if(n < min_val)
+            min_val = n;
+
+        if(n > max_val)
+            max_val = n;
+
+    end
+
+    // NE
+
+    if(se_mask[6])
+
+    begin
+
+        if(ne < min_val)
+            min_val = ne;
+
+        if(ne > max_val)
+            max_val = ne;
+
+    end
+
+    // W
+
+    if(se_mask[5])
+
+    begin
+
+        if(w < min_val)
+            min_val = w;
+
+        if(w > max_val)
+            max_val = w;
+
+    end
+
+    // SELF
+
+    if(se_mask[4])
+
+    begin
+
+        if(self < min_val)
+            min_val = self;
+
+        if(self > max_val)
+            max_val = self;
+
+    end
+
+    // E
+
+    if(se_mask[3])
+
+    begin
+
+        if(e < min_val)
+            min_val = e;
+
+        if(e > max_val)
+            max_val = e;
+
+    end
+
+    // SW
+
+    if(se_mask[2])
+
+    begin
+
+        if(sw < min_val)
+            min_val = sw;
+
+        if(sw > max_val)
+            max_val = sw;
+
+    end
+
+    // S
+
+    if(se_mask[1])
+
+    begin
+
+        if(s < min_val)
+            min_val = s;
+
+        if(s > max_val)
+            max_val = s;
+
+    end
+
+    // SE
+
+    if(se_mask[0])
+
+    begin
+
+        if(se < min_val)
+            min_val = se;
+
+        if(se > max_val)
+            max_val = se;
 
     end
 
