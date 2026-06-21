@@ -1,0 +1,181 @@
+name: LIP FPGA Synthesis
+
+on:
+
+  push:
+
+  workflow_dispatch:
+
+jobs:
+
+  fpga_synth:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      ##########################################################
+      # Checkout
+      ##########################################################
+
+      - name: Checkout Repository
+
+        uses: actions/checkout@v4
+
+      ##########################################################
+      # Install Tools
+      ##########################################################
+
+      - name: Install Tools
+
+        run: |
+
+          sudo apt update
+
+          sudo apt install -y \
+          yosys \
+          nextpnr-ecp5 \
+          zip
+
+      ##########################################################
+      # Verify Installation
+      ##########################################################
+
+      - name: Show Versions
+
+        run: |
+
+          yosys -V
+
+          nextpnr-ecp5 --version
+
+      ##########################################################
+      # Create folders
+      ##########################################################
+
+      - name: Create Output Folders
+
+        run: |
+
+          mkdir fpga_reports
+
+          mkdir fpga_netlists
+
+      ##########################################################
+      # lip_pe
+      ##########################################################
+
+      - name: Synthesize lip_pe (ECP5)
+
+        run: |
+
+          yosys -p "
+
+            read_verilog rtl/pe/*.v
+
+            hierarchy -check -top lip_pe
+
+            synth_ecp5 \
+            -json fpga_netlists/lip_pe.json
+
+            stat
+
+          " > fpga_reports/lip_pe_fpga.txt
+
+      ##########################################################
+      # lip_array
+      ##########################################################
+
+      - name: Synthesize lip_array (ECP5)
+
+        run: |
+
+          yosys -p "
+
+            read_verilog rtl/pe/*.v
+
+            read_verilog rtl/array/*.v
+
+            hierarchy -check -top lip_array
+
+            synth_ecp5 \
+            -json fpga_netlists/lip_array.json
+
+            stat
+
+          " > fpga_reports/lip_array_fpga.txt
+
+      ##########################################################
+      # lip_top
+      ##########################################################
+
+      - name: Synthesize lip_top (ECP5)
+
+        run: |
+
+          yosys -p "
+
+            read_verilog rtl/pe/*.v
+
+            read_verilog rtl/array/*.v
+
+            read_verilog rtl/top/*.v
+
+            hierarchy -check -top lip_top
+
+            synth_ecp5 \
+            -json fpga_netlists/lip_top.json
+
+            stat
+
+          " > fpga_reports/lip_top_fpga.txt
+
+      ##########################################################
+      # Zip everything
+      ##########################################################
+
+      - name: Create Zip Artifact
+
+        run: |
+
+          zip -r lip_fpga_results.zip \
+          fpga_reports \
+          fpga_netlists
+
+      ##########################################################
+      # Upload
+      ##########################################################
+
+      - name: Upload FPGA Results
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: lip-fpga-results
+
+          path: lip_fpga_results.zip
+
+      ##########################################################
+      # Print Summary
+      ##########################################################
+
+      - name: Print Summary
+
+        run: |
+
+          echo "===== LIP PE ====="
+
+          tail -n 30 fpga_reports/lip_pe_fpga.txt
+
+          echo ""
+
+          echo "===== LIP ARRAY ====="
+
+          tail -n 30 fpga_reports/lip_array_fpga.txt
+
+          echo ""
+
+          echo "===== LIP TOP ====="
+
+          tail -n 30 fpga_reports/lip_top_fpga.txt
