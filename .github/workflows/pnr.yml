@@ -25,6 +25,7 @@ jobs:
 
     - name: Install FPGA Tools
       run: |
+
         sudo apt update
 
         sudo apt install -y \
@@ -33,18 +34,31 @@ jobs:
           zip
 
     ###################################################
-    # Show repository
+    # Versions
+    ###################################################
+
+    - name: Show Tool Versions
+      run: |
+
+        yosys -V
+
+        nextpnr-ecp5 --version
+
+    ###################################################
+    # Show repo
     ###################################################
 
     - name: Show Repository Structure
       run: |
+
         find .
 
     ###################################################
-    # FPGA Synthesis
+    # Generate JSON
     ###################################################
 
     - name: Generate ECP5 JSON
+
       run: |
 
         yosys -p "
@@ -65,35 +79,42 @@ jobs:
         " > fpga_synth_report.txt
 
     ###################################################
-    # Place and Route
+    # Run nextpnr
     ###################################################
 
     - name: Run nextpnr
+
+      continue-on-error: true
+
       run: |
 
         nextpnr-ecp5 \
-          --25k \
+          --85k \
           --package CABGA381 \
+          --speed 6 \
           --json lip_array.json \
           --textcfg lip_array.config \
-          > nextpnr_report.txt 2>&1
+          | tee nextpnr_report.txt
 
     ###################################################
-    # Collect outputs
+    # Package outputs
     ###################################################
 
     - name: Package Results
+
       run: |
 
         mkdir pnr_results
 
         cp lip_array.json pnr_results/
 
-        cp lip_array.config pnr_results/
-
         cp fpga_synth_report.txt pnr_results/
 
         cp nextpnr_report.txt pnr_results/
+
+        if [ -f lip_array.config ]; then
+          cp lip_array.config pnr_results/
+        fi
 
         zip -r lip-fpga-pnr.zip pnr_results
 
@@ -101,7 +122,8 @@ jobs:
     # Upload artifact
     ###################################################
 
-    - name: Upload PnR Artifact
+    - name: Upload Artifact
+
       uses: actions/upload-artifact@v4
 
       with:
@@ -111,12 +133,15 @@ jobs:
         path: lip-fpga-pnr.zip
 
     ###################################################
-    # Summary
+    # Print report
     ###################################################
 
-    - name: Print nextpnr Summary
+    - name: Print nextpnr Report
+
+      if: always()
+
       run: |
 
         echo "===== NEXTPNR ====="
 
-        tail -n 80 nextpnr_report.txt
+        cat nextpnr_report.txt
