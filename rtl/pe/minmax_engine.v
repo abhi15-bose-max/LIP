@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module minmax_engine (
 
     input [15:0] nw,
