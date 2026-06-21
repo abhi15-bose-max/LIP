@@ -61,11 +61,13 @@ uut(
 always #5 clk = ~clk;
 
 // ============================================================
-// Utilities
+// Frame printer
 // ============================================================
 
 integer r;
+
 integer c;
+
 integer idx;
 
 task print_frame;
@@ -119,12 +121,12 @@ begin
     frame_in = 0;
 
     // ========================================================
-    // Create diagonal image
+    // Diagonal Image
     // ========================================================
 
-    frame_in[0*PIXEL_BITS +: PIXEL_BITS]  = 1000;
+    frame_in[0*PIXEL_BITS  +: PIXEL_BITS] = 1000;
 
-    frame_in[9*PIXEL_BITS +: PIXEL_BITS]  = 1000;
+    frame_in[9*PIXEL_BITS  +: PIXEL_BITS] = 1000;
 
     frame_in[18*PIXEL_BITS +: PIXEL_BITS] = 1000;
 
@@ -152,7 +154,7 @@ begin
 
     opcode = 3'b000;
 
-    #10;
+    #20;
 
     $display("=== PASS ===");
 
@@ -164,7 +166,7 @@ begin
 
     opcode = 3'b001;
 
-    #10;
+    #20;
 
     $display("=== EROSION ===");
 
@@ -176,7 +178,7 @@ begin
 
     opcode = 3'b010;
 
-    #10;
+    #20;
 
     $display("=== DILATION ===");
 
@@ -188,7 +190,7 @@ begin
 
     opcode = 3'b101;
 
-    #10;
+    #20;
 
     $display("=== UNIFORMITY ===");
 
@@ -200,7 +202,7 @@ begin
 
     opcode = 3'b110;
 
-    #10;
+    #20;
 
     $display("=== ROUGHNESS ===");
 
