@@ -1,5 +1,10 @@
 `timescale 1ns/1ps
 
+// ============================================================================
+// Local Interaction Processor (LIP)
+// Processing Element
+// ============================================================================
+
 module lip_pe (
 
     input clk,
@@ -26,25 +31,23 @@ module lip_pe (
 
 );
 
-wire [15:0] m_nw;
-wire [15:0] m_n;
-wire [15:0] m_ne;
-
-wire [15:0] m_w;
-wire [15:0] m_self;
-wire [15:0] m_e;
-
-wire [15:0] m_sw;
-wire [15:0] m_s;
-wire [15:0] m_se;
+// ============================================================
+// Internal Signals
+// ============================================================
 
 wire [15:0] min_val;
+
 wire [15:0] max_val;
 
 wire uniformity;
+
 wire roughness;
 
-se_mask sm (
+// ============================================================
+// Min / Max Engine
+// ============================================================
+
+minmax_engine mm (
 
     .nw(nw),
     .n(n),
@@ -60,66 +63,73 @@ se_mask sm (
 
     .se_mask(se_mask),
 
-    .m_nw(m_nw),
-    .m_n(m_n),
-    .m_ne(m_ne),
-
-    .m_w(m_w),
-    .m_self(m_self),
-    .m_e(m_e),
-
-    .m_sw(m_sw),
-    .m_s(m_s),
-    .m_se(m_se)
-
-);
-
-minmax_engine mm (
-
-    .nw(m_nw),
-    .n(m_n),
-    .ne(m_ne),
-
-    .w(m_w),
-    .self(m_self),
-    .e(m_e),
-
-    .sw(m_sw),
-    .s(m_s),
-    .se(m_se),
-
     .min_val(min_val),
+
     .max_val(max_val)
 
 );
 
+// ============================================================
+// Threshold Engine
+// ============================================================
+
 threshold_engine te (
 
     .min_val(min_val),
+
     .max_val(max_val),
 
     .threshold(threshold),
 
     .uniformity(uniformity),
+
     .roughness(roughness)
 
 );
 
-always @(posedge clk) begin
+// ============================================================
+// Opcode Selection
+// ============================================================
+
+always @(posedge clk)
+
+begin
 
     case(opcode)
 
-        3'b000: out <= self;
+        // PASS
 
-        3'b001: out <= min_val;
+        3'b000:
 
-        3'b010: out <= max_val;
+            out <= self;
 
-        3'b101: out <= {15'b0,uniformity};
+        // EROSION
 
-        3'b110: out <= {15'b0,roughness};
+        3'b001:
 
-        default: out <= 16'd0;
+            out <= min_val;
+
+        // DILATION
+
+        3'b010:
+
+            out <= max_val;
+
+        // UNIFORMITY
+
+        3'b101:
+
+            out <= {15'd0, uniformity};
+
+        // ROUGHNESS
+
+        3'b110:
+
+            out <= {15'd0, roughness};
+
+        default:
+
+            out <= 16'd0;
 
     endcase
 
