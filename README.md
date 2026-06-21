@@ -222,3 +222,4 @@ Next:
 If a problem can be solved using only local neighbourhood interactions and tiny arithmetic operations, it belongs on this chip.
 
 ```
+
