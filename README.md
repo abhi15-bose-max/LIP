@@ -1,14 +1,158 @@
-# LIP
+# Local Interaction Processor (LIP)
 
-Absolutely. Since you're **freezing LIP V1**, I'd actually standardize all the commands now.
+A lightweight FPGA-first image morphology accelerator built around local neighborhood interactions.
 
-I'd categorize them.
+LIP performs useful computations using only immediate neighbours and tiny arithmetic operations.
 
-# 1. Run the main single-pass TB
+The architecture avoids global memory-heavy algorithms and instead focuses on deterministic, scalable local processing.
 
-`tb_master.v`
+---
 
-Compile:
+## Core Idea
+
+Each Processing Element (PE) only sees a 3×3 neighbourhood.
+
+```
+
+NW N NE
+
+W C E
+
+SW S SE
+
+```
+
+Every PE independently performs local operations.
+
+Multiple PEs are tiled together into an NxN array.
+
+---
+
+## Supported Operations
+
+| Opcode | Operation | Description |
+|-------|-----------|-------------|
+|000|Pass|Output center pixel|
+|001|Erosion|Local minimum|
+|010|Dilation|Local maximum|
+|011|Opening|Erosion → Dilation|
+|100|Closing|Dilation → Erosion|
+|101|Uniformity|Detect smooth regions|
+|110|Roughness|Detect irregular regions|
+
+---
+
+## Structuring Element Masks
+
+LIP supports dynamic 3×3 masks.
+
+Examples:
+
+### Full
+
+111
+
+111
+
+111
+
+### Cross
+
+010
+
+111
+
+010
+
+### X
+
+101
+
+010
+
+101
+
+### Horizontal
+
+000
+
+111
+
+000
+
+### Vertical
+
+010
+
+010
+
+010
+
+Any arbitrary 3×3 mask is supported.
+
+---
+
+## Uniformity
+
+Measures local smoothness.
+
+```
+
+uniformity = (max-min) <= threshold
+
+```
+
+Applications:
+
+- background detection
+- healthy regions
+- stable surfaces
+
+---
+
+## Roughness
+
+Measures local variation.
+
+```
+
+roughness = (max-min) > threshold
+
+```
+
+Applications:
+
+- anomaly detection
+- crack detection
+- texture changes
+- defect localization
+
+---
+
+## Repository Structure
+
+```
+
+LIP/
+
+rtl/
+├── pe/
+├── array/
+└── top/
+
+tb/
+├── tb_top.v
+├── tb_master.v
+├── tb_masks.v
+└── tb_open_close.v
+
+```
+
+---
+
+## Running Simulations
+
+### Master Demo
 
 ```bash
 iverilog \
@@ -17,27 +161,11 @@ rtl/pe/*.v \
 rtl/array/*.v \
 rtl/top/*.v \
 tb/tb_master.v
-```
 
-Run:
-
-```bash
 vvp master_sim
 ```
 
-Waveform:
-
-```bash
-gtkwave master.vcd
-```
-
----
-
-# 2. Run the SE mask exploration TB
-
-`tb_masks.v`
-
-Compile:
+### Structuring Element Demo
 
 ```bash
 iverilog \
@@ -46,27 +174,11 @@ rtl/pe/*.v \
 rtl/array/*.v \
 rtl/top/*.v \
 tb/tb_masks.v
-```
 
-Run:
-
-```bash
 vvp masks_sim
 ```
 
-Waveform:
-
-```bash
-gtkwave masks.vcd
-```
-
----
-
-# 3. Run opening / closing TB
-
-`tb_open_close.v`
-
-Compile:
+### Opening / Closing Demo
 
 ```bash
 iverilog \
@@ -75,235 +187,38 @@ rtl/pe/*.v \
 rtl/array/*.v \
 rtl/top/*.v \
 tb/tb_open_close.v
-```
 
-Run:
-
-```bash
 vvp oc_sim
 ```
 
-Waveform:
-
-```bash
-gtkwave openclose.vcd
-```
-
 ---
 
-# 4. Run original top TB
+## Current Status
 
-`tb_top.v`
-
-Compile:
-
-```bash
-iverilog \
--o lip_sim \
-rtl/pe/*.v \
-rtl/array/*.v \
-rtl/top/*.v \
-tb/tb_top.v
-```
-
-Run:
-
-```bash
-vvp lip_sim
-```
-
-Waveform:
-
-```bash
-gtkwave lip.vcd
-```
-
----
-
-# 5. Clean generated files
-
-Delete simulations:
-
-```bash
-rm -f *.vcd
-```
-
-Delete binaries:
-
-```bash
-rm -f *_sim
-```
-
-Delete both:
-
-```bash
-rm -f *.vcd *_sim
-```
-
----
-
-# 6. Git commands (you've been using these a lot)
-
-Check status:
-
-```bash
-git status
-```
-
-Add everything:
-
-```bash
-git add .
-```
-
-Commit:
-
-```bash
-git commit -m "freeze LIP v1"
-```
-
-Push:
-
-```bash
-git push
-```
-
-See history:
-
-```bash
-git log --oneline
-```
-
----
-
-# 7. FPGA synthesis (Yosys)
-
-Generate a synthesized netlist.
-
-```bash
-yosys
-```
-
-Inside yosys:
-
-```text
-read_verilog rtl/pe/*.v
-
-read_verilog rtl/array/*.v
-
-read_verilog rtl/top/*.v
-
-hierarchy -top lip_top
-
-proc
-
-opt
-
-fsm
-
-opt
-
-memory
-
-opt
-
-techmap
-
-opt
-
-stat
-
-write_json lip.json
-```
-
-or one-liner:
-
-```bash
-yosys -p "
-read_verilog rtl/pe/*.v;
-read_verilog rtl/array/*.v;
-read_verilog rtl/top/*.v;
-hierarchy -top lip_top;
-synth;
-write_json lip.json"
-```
-
----
-
-# 8. nextpnr (later)
-
-For example if using an iCE40 FPGA:
-
-```bash
-nextpnr-ice40 \
---hx8k \
---package ct256 \
---json lip.json \
---asc lip.asc
-```
-
-Generate bitstream:
-
-```bash
-icepack lip.asc lip.bin
-```
-
-Flash:
-
-```bash
-iceprog lip.bin
-```
-
----
-
-# 9. OpenLane (later)
-
-When you go ASIC route:
-
-```bash
-docker pull efabless/openlane:latest
-```
-
-Run:
-
-```bash
-docker run -it \
--v $PWD:/openlane/designs/LIP \
-efabless/openlane:latest
-```
-
----
-
-# 10. Honestly, I would now make a tiny cheat sheet in the README.
-
-```text
 LIP V1
 
-tb_top.v
-├── baseline demo
+Implemented:
 
-tb_master.v
-├── grayscale image demo
+- 16-bit grayscale processing
+- Dynamic structuring elements
+- NxN PE arrays
+- Erosion
+- Dilation
+- Opening
+- Closing
+- Uniformity
+- Roughness
 
-tb_masks.v
-├── structuring element demo
+Next:
 
-tb_open_close.v
-├── opening / closing demo
+- Yosys synthesis
+- FPGA implementation
+- OpenLane ASIC flow
 
-Commands
+---
 
-iverilog -> compile
+## Philosophy
 
-vvp -> simulate
+If a problem can be solved using only local neighbourhood interactions and tiny arithmetic operations, it belongs on this chip.
 
-gtkwave -> visualize
-
-yosys -> synthesize
-
-nextpnr -> place & route
-
-openlane -> ASIC flow
 ```
-
-That's usually the point where a project goes from **"lots of files"** to **"an actual accelerator repository"**. 🚀
