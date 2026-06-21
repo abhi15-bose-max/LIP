@@ -1,1 +1,180 @@
+name: LIP Multi-Synthesis
 
+on:
+  push:
+
+  workflow_dispatch:
+
+jobs:
+
+  synth:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      ##########################################################
+      # Checkout
+      ##########################################################
+
+      - name: Checkout Repository
+
+        uses: actions/checkout@v4
+
+      ##########################################################
+      # Install Yosys
+      ##########################################################
+
+      - name: Install Yosys
+
+        run: |
+
+          sudo apt update
+
+          sudo apt install -y yosys zip
+
+      ##########################################################
+      # Show Repository
+      ##########################################################
+
+      - name: Show Repository Structure
+
+        run: |
+
+          find .
+
+      ##########################################################
+      # Create reports directory
+      ##########################################################
+
+      - name: Create Report Folder
+
+        run: |
+
+          mkdir synth_reports
+
+      ##########################################################
+      # Synthesize lip_pe
+      ##########################################################
+
+      - name: Synthesize lip_pe
+
+        run: |
+
+          yosys -p "
+
+            read_verilog rtl/pe/*.v
+
+            hierarchy -check -top lip_pe
+
+            proc
+
+            opt
+
+            synth
+
+            stat
+
+          " > synth_reports/lip_pe_report.txt
+
+      ##########################################################
+      # Synthesize lip_array
+      ##########################################################
+
+      - name: Synthesize lip_array
+
+        run: |
+
+          yosys -p "
+
+            read_verilog rtl/pe/*.v
+
+            read_verilog rtl/array/*.v
+
+            hierarchy -check -top lip_array
+
+            proc
+
+            opt
+
+            synth
+
+            stat
+
+          " > synth_reports/lip_array_report.txt
+
+      ##########################################################
+      # Synthesize lip_top
+      ##########################################################
+
+      - name: Synthesize lip_top
+
+        run: |
+
+          yosys -p "
+
+            read_verilog rtl/pe/*.v
+
+            read_verilog rtl/array/*.v
+
+            read_verilog rtl/top/*.v
+
+            hierarchy -check -top lip_top
+
+            proc
+
+            opt
+
+            synth
+
+            stat
+
+          " > synth_reports/lip_top_report.txt
+
+      ##########################################################
+      # Zip Reports
+      ##########################################################
+
+      - name: Create Zip
+
+        run: |
+
+          zip -r lip_synthesis_reports.zip synth_reports
+
+      ##########################################################
+      # Upload Artifact
+      ##########################################################
+
+      - name: Upload Synthesis Reports
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: lip-synthesis-reports
+
+          path: lip_synthesis_reports.zip
+
+      ##########################################################
+      # Print Summary
+      ##########################################################
+
+      - name: Print Summary
+
+        run: |
+
+          echo "===== LIP PE ====="
+
+          tail -n 30 synth_reports/lip_pe_report.txt
+
+          echo ""
+
+          echo "===== LIP ARRAY ====="
+
+          tail -n 30 synth_reports/lip_array_report.txt
+
+          echo ""
+
+          echo "===== LIP TOP ====="
+
+          tail -n 30 synth_reports/lip_top_report.txt
