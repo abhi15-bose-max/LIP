@@ -1,0 +1,122 @@
+name: LIP FPGA Place and Route
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+
+  pnr:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    ###################################################
+    # Checkout
+    ###################################################
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    ###################################################
+    # Install tools
+    ###################################################
+
+    - name: Install FPGA Tools
+      run: |
+        sudo apt update
+
+        sudo apt install -y \
+          yosys \
+          nextpnr-ecp5 \
+          zip
+
+    ###################################################
+    # Show repository
+    ###################################################
+
+    - name: Show Repository Structure
+      run: |
+        find .
+
+    ###################################################
+    # FPGA Synthesis
+    ###################################################
+
+    - name: Generate ECP5 JSON
+      run: |
+
+        yosys -p "
+
+          read_verilog \
+            rtl/pe/*.v \
+            rtl/array/*.v \
+            rtl/top/*.v
+
+          hierarchy -check -top lip_array
+
+          synth_ecp5 \
+            -top lip_array \
+            -json lip_array.json
+
+          stat
+
+        " > fpga_synth_report.txt
+
+    ###################################################
+    # Place and Route
+    ###################################################
+
+    - name: Run nextpnr
+      run: |
+
+        nextpnr-ecp5 \
+          --25k \
+          --package CABGA381 \
+          --json lip_array.json \
+          --textcfg lip_array.config \
+          > nextpnr_report.txt 2>&1
+
+    ###################################################
+    # Collect outputs
+    ###################################################
+
+    - name: Package Results
+      run: |
+
+        mkdir pnr_results
+
+        cp lip_array.json pnr_results/
+
+        cp lip_array.config pnr_results/
+
+        cp fpga_synth_report.txt pnr_results/
+
+        cp nextpnr_report.txt pnr_results/
+
+        zip -r lip-fpga-pnr.zip pnr_results
+
+    ###################################################
+    # Upload artifact
+    ###################################################
+
+    - name: Upload PnR Artifact
+      uses: actions/upload-artifact@v4
+
+      with:
+
+        name: lip-fpga-pnr
+
+        path: lip-fpga-pnr.zip
+
+    ###################################################
+    # Summary
+    ###################################################
+
+    - name: Print nextpnr Summary
+      run: |
+
+        echo "===== NEXTPNR ====="
+
+        tail -n 80 nextpnr_report.txt
