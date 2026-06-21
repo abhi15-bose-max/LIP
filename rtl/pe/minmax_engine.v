@@ -1,6 +1,23 @@
 `timescale 1ns/1ps
 
-module minmax_engine (
+// ============================================================================
+// Local Interaction Processor (LIP)
+// Min/Max Engine
+//
+// Computes MIN and MAX over enabled neighbours only.
+//
+// SE mask layout:
+//
+// 8 7 6
+// 5 4 3
+// 2 1 0
+//
+// NW N NE
+// W  C E
+// SW S SE
+// ============================================================================
+
+module minmax_engine(
 
     input [15:0] nw,
     input [15:0] n,
@@ -14,40 +31,78 @@ module minmax_engine (
     input [15:0] s,
     input [15:0] se,
 
-    output [15:0] min_val,
-    output [15:0] max_val
+    input [8:0] se_mask,
+
+    output reg [15:0] min_val,
+
+    output reg [15:0] max_val
 
 );
 
-reg [15:0] min_r;
-reg [15:0] max_r;
+// ============================================================
+// Internal storage
+// ============================================================
 
-always @(*) begin
+reg [15:0] values [0:8];
 
-    min_r = nw;
-    max_r = nw;
+integer i;
 
-    if(n < min_r) min_r = n;
-    if(ne < min_r) min_r = ne;
-    if(w < min_r) min_r = w;
-    if(self < min_r) min_r = self;
-    if(e < min_r) min_r = e;
-    if(sw < min_r) min_r = sw;
-    if(s < min_r) min_r = s;
-    if(se < min_r) min_r = se;
+// ============================================================
+// Min / Max computation
+// ============================================================
 
-    if(n > max_r) max_r = n;
-    if(ne > max_r) max_r = ne;
-    if(w > max_r) max_r = w;
-    if(self > max_r) max_r = self;
-    if(e > max_r) max_r = e;
-    if(sw > max_r) max_r = sw;
-    if(s > max_r) max_r = s;
-    if(se > max_r) max_r = se;
+always @(*)
+
+begin
+
+    // --------------------------------------------------------
+    // Neighbour ordering
+    // --------------------------------------------------------
+
+    values[0] = nw;
+    values[1] = n;
+    values[2] = ne;
+
+    values[3] = w;
+    values[4] = self;
+    values[5] = e;
+
+    values[6] = sw;
+    values[7] = s;
+    values[8] = se;
+
+    // --------------------------------------------------------
+    // Initialize
+    // --------------------------------------------------------
+
+    min_val = 16'hFFFF;
+
+    max_val = 16'h0000;
+
+    // --------------------------------------------------------
+    // Compute only enabled neighbours
+    // --------------------------------------------------------
+
+    for(i=0;i<9;i=i+1)
+
+    begin
+
+        if(se_mask[8-i])
+
+        begin
+
+            if(values[i] < min_val)
+
+                min_val = values[i];
+
+            if(values[i] > max_val)
+
+                max_val = values[i];
+
+        end
+
+    end
 
 end
-
-assign min_val = min_r;
-assign max_val = max_r;
 
 endmodule
