@@ -2,6 +2,7 @@
 // Local Interaction Processor (LIP)
 // Top Level
 // ============================================================================
+`timescale 1ns/1ps
 
 module lip_top #
 
