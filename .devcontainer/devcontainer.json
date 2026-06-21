@@ -1,0 +1,11 @@
+{
+  "name": "Local Interaction Processor",
+
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  "postCreateCommand": "sudo apt update && sudo apt install -y iverilog yosys gtkwave make python3"
+}
