@@ -1,0 +1,307 @@
+Absolutely. Since you're **freezing LIP V1**, I'd actually standardize all the commands now.
+
+I'd categorize them.
+
+# 1. Run the main single-pass TB
+
+`tb_master.v`
+
+Compile:
+
+```bash
+iverilog \
+-o master_sim \
+rtl/pe/*.v \
+rtl/array/*.v \
+rtl/top/*.v \
+tb/tb_master.v
+```
+
+Run:
+
+```bash
+vvp master_sim
+```
+
+Waveform:
+
+```bash
+gtkwave master.vcd
+```
+
+---
+
+# 2. Run the SE mask exploration TB
+
+`tb_masks.v`
+
+Compile:
+
+```bash
+iverilog \
+-o masks_sim \
+rtl/pe/*.v \
+rtl/array/*.v \
+rtl/top/*.v \
+tb/tb_masks.v
+```
+
+Run:
+
+```bash
+vvp masks_sim
+```
+
+Waveform:
+
+```bash
+gtkwave masks.vcd
+```
+
+---
+
+# 3. Run opening / closing TB
+
+`tb_open_close.v`
+
+Compile:
+
+```bash
+iverilog \
+-o oc_sim \
+rtl/pe/*.v \
+rtl/array/*.v \
+rtl/top/*.v \
+tb/tb_open_close.v
+```
+
+Run:
+
+```bash
+vvp oc_sim
+```
+
+Waveform:
+
+```bash
+gtkwave openclose.vcd
+```
+
+---
+
+# 4. Run original top TB
+
+`tb_top.v`
+
+Compile:
+
+```bash
+iverilog \
+-o lip_sim \
+rtl/pe/*.v \
+rtl/array/*.v \
+rtl/top/*.v \
+tb/tb_top.v
+```
+
+Run:
+
+```bash
+vvp lip_sim
+```
+
+Waveform:
+
+```bash
+gtkwave lip.vcd
+```
+
+---
+
+# 5. Clean generated files
+
+Delete simulations:
+
+```bash
+rm -f *.vcd
+```
+
+Delete binaries:
+
+```bash
+rm -f *_sim
+```
+
+Delete both:
+
+```bash
+rm -f *.vcd *_sim
+```
+
+---
+
+# 6. Git commands (you've been using these a lot)
+
+Check status:
+
+```bash
+git status
+```
+
+Add everything:
+
+```bash
+git add .
+```
+
+Commit:
+
+```bash
+git commit -m "freeze LIP v1"
+```
+
+Push:
+
+```bash
+git push
+```
+
+See history:
+
+```bash
+git log --oneline
+```
+
+---
+
+# 7. FPGA synthesis (Yosys)
+
+Generate a synthesized netlist.
+
+```bash
+yosys
+```
+
+Inside yosys:
+
+```text
+read_verilog rtl/pe/*.v
+
+read_verilog rtl/array/*.v
+
+read_verilog rtl/top/*.v
+
+hierarchy -top lip_top
+
+proc
+
+opt
+
+fsm
+
+opt
+
+memory
+
+opt
+
+techmap
+
+opt
+
+stat
+
+write_json lip.json
+```
+
+or one-liner:
+
+```bash
+yosys -p "
+read_verilog rtl/pe/*.v;
+read_verilog rtl/array/*.v;
+read_verilog rtl/top/*.v;
+hierarchy -top lip_top;
+synth;
+write_json lip.json"
+```
+
+---
+
+# 8. nextpnr (later)
+
+For example if using an iCE40 FPGA:
+
+```bash
+nextpnr-ice40 \
+--hx8k \
+--package ct256 \
+--json lip.json \
+--asc lip.asc
+```
+
+Generate bitstream:
+
+```bash
+icepack lip.asc lip.bin
+```
+
+Flash:
+
+```bash
+iceprog lip.bin
+```
+
+---
+
+# 9. OpenLane (later)
+
+When you go ASIC route:
+
+```bash
+docker pull efabless/openlane:latest
+```
+
+Run:
+
+```bash
+docker run -it \
+-v $PWD:/openlane/designs/LIP \
+efabless/openlane:latest
+```
+
+---
+
+# 10. Honestly, I would now make a tiny cheat sheet in the README.
+
+```text
+LIP V1
+
+tb_top.v
+├── baseline demo
+
+tb_master.v
+├── grayscale image demo
+
+tb_masks.v
+├── structuring element demo
+
+tb_open_close.v
+├── opening / closing demo
+
+Commands
+
+iverilog -> compile
+
+vvp -> simulate
+
+gtkwave -> visualize
+
+yosys -> synthesize
+
+nextpnr -> place & route
+
+openlane -> ASIC flow
+```
+
+That's usually the point where a project goes from **"lots of files"** to **"an actual accelerator repository"**. 🚀
