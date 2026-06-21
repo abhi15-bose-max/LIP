@@ -90,7 +90,133 @@ begin
 
 end
 
-$display("--------------------------------");
+$display("----------------------------------------");
+
+end
+
+endtask;
+
+// ============================================================
+// OPENING DEMO
+// ============================================================
+
+task run_opening;
+
+begin
+
+$display("");
+$display("=================================");
+$display("OPENING");
+$display("Remove isolated noise");
+$display("=================================");
+
+frame_in=0;
+
+// central object
+
+frame_in[27*16 +:16]=1000;
+
+frame_in[28*16 +:16]=1000;
+
+frame_in[35*16 +:16]=1000;
+
+frame_in[36*16 +:16]=1000;
+
+// isolated noise
+
+frame_in[5*16 +:16]=1000;
+
+frame_in[58*16 +:16]=1000;
+
+$display("Input:");
+
+opcode=3'b000;
+
+#20;
+
+print_frame();
+
+// erosion
+
+opcode=3'b001;
+
+#20;
+
+stage_buffer=frame_out;
+
+// dilation
+
+frame_in=stage_buffer;
+
+opcode=3'b010;
+
+#20;
+
+$display("Output:");
+
+print_frame();
+
+end
+
+endtask
+
+// ============================================================
+// CLOSING DEMO
+// ============================================================
+
+task run_closing;
+
+begin
+
+$display("");
+$display("=================================");
+$display("CLOSING");
+$display("Fill holes");
+$display("=================================");
+
+frame_in=0;
+
+// 3x3 object
+
+frame_in[18*16 +:16]=1000;
+frame_in[19*16 +:16]=1000;
+frame_in[20*16 +:16]=1000;
+
+frame_in[26*16 +:16]=1000;
+// hole here
+frame_in[28*16 +:16]=1000;
+
+frame_in[34*16 +:16]=1000;
+frame_in[35*16 +:16]=1000;
+frame_in[36*16 +:16]=1000;
+
+$display("Input:");
+
+opcode=3'b000;
+
+#20;
+
+print_frame();
+
+// dilation
+
+opcode=3'b010;
+
+#20;
+
+stage_buffer=frame_out;
+
+// erosion
+
+frame_in=stage_buffer;
+
+opcode=3'b001;
+
+#20;
+
+$display("Output:");
+
+print_frame();
 
 end
 
@@ -108,97 +234,17 @@ $dumpvars(0,tb_open_close);
 
 clk=0;
 
-frame_in=0;
-
-// ========================================================
-// Image with noise
-// ========================================================
-
-frame_in[27*16 +:16]=1000;
-
-frame_in[28*16 +:16]=1000;
-
-frame_in[35*16 +:16]=1000;
-
-frame_in[36*16 +:16]=1000;
-
-// isolated noise
-
-frame_in[5*16 +:16]=1000;
-
-frame_in[60*16 +:16]=1000;
-
-se_mask=9'b111111111;
-
 threshold=16'd100;
 
-// ========================================================
-// OPENING
-// ========================================================
-
-$display("=== OPENING ===");
-
-// pass1
-
-opcode=3'b001;
-
-#20;
-
-stage_buffer=frame_out;
-
-// pass2
-
-frame_in=stage_buffer;
-
-opcode=3'b010;
-
-#20;
-
-print_frame();
-
-// ========================================================
-// RESET IMAGE
-// ========================================================
-
-frame_in=0;
-
-frame_in[27*16 +:16]=1000;
-
-frame_in[28*16 +:16]=1000;
-
-frame_in[35*16 +:16]=1000;
-
-frame_in[36*16 +:16]=1000;
-
-// hole
-
-frame_in[28*16 +:16]=0;
-
 se_mask=9'b111111111;
 
-// ========================================================
-// CLOSING
-// ========================================================
+#10;
 
-$display("=== CLOSING ===");
-
-// pass1
-
-opcode=3'b010;
+run_opening();
 
 #20;
 
-stage_buffer=frame_out;
-
-// pass2
-
-frame_in=stage_buffer;
-
-opcode=3'b001;
-
-#20;
-
-print_frame();
+run_closing();
 
 #20;
 
