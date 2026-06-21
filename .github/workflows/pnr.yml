@@ -1,4 +1,4 @@
-name: LIP FPGA Place and Route
+name: LIP FPGA Place And Route
 
 on:
   push:
@@ -12,16 +12,16 @@ jobs:
 
     steps:
 
-    ###################################################
+    ####################################################
     # Checkout
-    ###################################################
+    ####################################################
 
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    ###################################################
-    # Install tools
-    ###################################################
+    ####################################################
+    # Install FPGA Tools
+    ####################################################
 
     - name: Install FPGA Tools
       run: |
@@ -33,31 +33,11 @@ jobs:
           nextpnr-ecp5 \
           zip
 
-    ###################################################
-    # Versions
-    ###################################################
+    ####################################################
+    # FPGA Synthesis
+    ####################################################
 
-    - name: Show Tool Versions
-      run: |
-
-        yosys -V
-
-        nextpnr-ecp5 --version
-
-    ###################################################
-    # Show repo
-    ###################################################
-
-    - name: Show Repository Structure
-      run: |
-
-        find .
-
-    ###################################################
-    # Generate JSON
-    ###################################################
-
-    - name: Generate ECP5 JSON
+    - name: FPGA Synthesis
 
       run: |
 
@@ -74,31 +54,41 @@ jobs:
             -top lip_array \
             -json lip_array.json
 
-          stat
+        "
 
-        " > fpga_synth_report.txt
-
-    ###################################################
-    # Run nextpnr
-    ###################################################
+    ####################################################
+    # Place And Route
+    ####################################################
 
     - name: Run nextpnr
-
-      continue-on-error: true
 
       run: |
 
         nextpnr-ecp5 \
-          --85k \
+          --25k \
           --package CABGA381 \
-          --speed 6 \
           --json lip_array.json \
           --textcfg lip_array.config \
-          | tee nextpnr_report.txt
+          --freq 12 \
+          2>&1 | tee nextpnr_report.txt
 
-    ###################################################
-    # Package outputs
-    ###################################################
+    ####################################################
+    # Verify Output
+    ####################################################
+
+    - name: Verify Files
+
+      run: |
+
+        ls -lh
+
+        ls -lh nextpnr_report.txt
+
+        wc -l nextpnr_report.txt
+
+    ####################################################
+    # Zip Results
+    ####################################################
 
     - name: Package Results
 
@@ -108,21 +98,17 @@ jobs:
 
         cp lip_array.json pnr_results/
 
-        cp fpga_synth_report.txt pnr_results/
+        cp lip_array.config pnr_results/
 
         cp nextpnr_report.txt pnr_results/
 
-        if [ -f lip_array.config ]; then
-          cp lip_array.config pnr_results/
-        fi
-
         zip -r lip-fpga-pnr.zip pnr_results
 
-    ###################################################
-    # Upload artifact
-    ###################################################
+    ####################################################
+    # Upload Results
+    ####################################################
 
-    - name: Upload Artifact
+    - name: Upload PnR Results
 
       uses: actions/upload-artifact@v4
 
@@ -131,17 +117,3 @@ jobs:
         name: lip-fpga-pnr
 
         path: lip-fpga-pnr.zip
-
-    ###################################################
-    # Print report
-    ###################################################
-
-    - name: Print nextpnr Report
-
-      if: always()
-
-      run: |
-
-        echo "===== NEXTPNR ====="
-
-        cat nextpnr_report.txt
